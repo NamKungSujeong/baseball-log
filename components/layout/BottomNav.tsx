@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import useAppStore from "@/store/useAppStore";
 import { KBO_TEAMS } from "@/constants/kbo";
 
+const HIDDEN_PATHS = ["/login", "/signup"];
+
 const navItems = [
   {
     href: "/",
@@ -50,6 +52,8 @@ export default function BottomNav() {
   const supportingTeamId = useAppStore((s) => s.supportingTeamId);
   const team = KBO_TEAMS.find((t) => t.id === supportingTeamId);
   const themeColor = team?.primary ?? "#6366F1";
+
+  if (HIDDEN_PATHS.some((p) => pathname.startsWith(p))) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 safe-area-bottom" style={{ background: "var(--theme-bg-card)", borderTop: "1px solid var(--theme-primary-light)" }}>
