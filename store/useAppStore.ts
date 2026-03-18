@@ -1,11 +1,24 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { TeamId } from "@/types/game-log";
 
 interface AppState {
-  // 여기에 전역 상태 추가
+  supportingTeamId: TeamId | null;
+  nickname: string;
+  setSupportingTeam: (teamId: TeamId | null) => void;
+  setNickname: (nickname: string) => void;
 }
 
-const useAppStore = create<AppState>(() => ({
-  // 초기값
-}));
+const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      supportingTeamId: null,
+      nickname: "",
+      setSupportingTeam: (teamId) => set({ supportingTeamId: teamId }),
+      setNickname: (nickname) => set({ nickname }),
+    }),
+    { name: "baseball-app-storage" }
+  )
+);
 
 export default useAppStore;

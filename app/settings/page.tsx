@@ -1,0 +1,119 @@
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+import useAppStore from "@/store/useAppStore";
+import TeamSelector from "@/components/ui/TeamSelector";
+import { KBO_TEAMS } from "@/constants/kbo";
+import type { TeamId } from "@/types/game-log";
+
+export default function SettingsPage() {
+  const { nickname, supportingTeamId, setNickname, setSupportingTeam } = useAppStore();
+
+  const [nicknameInput, setNicknameInput] = useState(nickname);
+  const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(supportingTeamId);
+  const [saved, setSaved] = useState(false);
+
+  const supportingTeam = KBO_TEAMS.find((t) => t.id === selectedTeamId);
+
+  const handleSave = () => {
+    setNickname(nicknameInput.trim());
+    setSupportingTeam(selectedTeamId);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const hasChanges =
+    nicknameInput.trim() !== nickname || selectedTeamId !== supportingTeamId;
+
+  return (
+    <div>
+      {/* 헤더 */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-black tracking-tight" style={{ color: "var(--theme-primary)" }}>
+          설정 ⚙️
+        </h1>
+        <p className="text-xs text-gray-400 mt-0.5">프로필과 응원팀을 설정해요</p>
+      </div>
+
+      {/* 프로필 카드 */}
+      <div className="rounded-3xl p-5 shadow-sm mb-4" style={{ background: "var(--theme-bg-card)", border: "1px solid var(--theme-primary-light)" }}>
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: "var(--theme-primary-light)" }}
+          >
+            {supportingTeam ? (
+              <div className="w-8 h-8 relative">
+                <Image src={supportingTeam.logo} alt={supportingTeam.name} fill className="object-contain" />
+              </div>
+            ) : (
+              <span className="text-2xl">⚾</span>
+            )}
+          </div>
+          <div>
+            <p className="font-bold text-gray-800">
+              {nicknameInput.trim() || "닉네임을 설정해봐요"}
+            </p>
+            <p className="text-xs text-gray-400">
+              {supportingTeam ? `${supportingTeam.name} 팬` : "응원팀 미설정"}
+            </p>
+          </div>
+        </div>
+
+        <label className="block text-xs font-bold text-gray-500 mb-1.5">닉네임</label>
+        <input
+          type="text"
+          value={nicknameInput}
+          onChange={(e) => setNicknameInput(e.target.value)}
+          placeholder="닉네임을 입력하세요"
+          maxLength={20}
+          className="w-full px-4 py-3 rounded-2xl border text-sm font-medium outline-none focus:border-[var(--theme-primary)] transition-colors"
+          style={{ background: "var(--theme-bg)", borderColor: "var(--theme-primary-light)" }}
+        />
+      </div>
+
+      {/* 응원팀 선택 카드 */}
+      <div className="rounded-3xl p-5 shadow-sm mb-6" style={{ background: "var(--theme-bg-card)", border: "1px solid var(--theme-primary-light)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-base">💛</span>
+          <p className="text-sm font-bold text-gray-700">응원팀 변경</p>
+          {selectedTeamId && selectedTeamId !== supportingTeamId && (
+            <span className="ml-auto text-xs text-orange-400 font-medium">변경됨</span>
+          )}
+        </div>
+
+        <TeamSelector value={selectedTeamId} onChange={setSelectedTeamId} />
+
+        {selectedTeamId && (
+          <div
+            className="mt-4 p-3 rounded-2xl flex items-center gap-3"
+            style={{ background: "var(--theme-primary-light)" }}
+          >
+            <div className="w-9 h-9 relative shrink-0">
+              {supportingTeam && (
+                <Image src={supportingTeam.logo} alt={supportingTeam.name} fill className="object-contain" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-bold" style={{ color: supportingTeam?.primary }}>
+                {supportingTeam?.name}
+              </p>
+              <p className="text-xs text-gray-400">선택된 응원팀</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 저장 버튼 */}
+      <button
+        onClick={handleSave}
+        disabled={!hasChanges && !saved}
+        className="w-full py-4 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-40"
+        style={{ background: saved ? "#22C55E" : "var(--theme-primary)" }}
+      >
+        {saved ? "저장됐어요 ✓" : "저장하기"}
+      </button>
+    </div>
+  );
+}
