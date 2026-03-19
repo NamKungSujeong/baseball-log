@@ -2,14 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { GameLog, GameLogFormData, GameResult, TeamId } from "@/types/game-log";
+import Image from "next/image";
+import type {
+  GameLog,
+  GameLogFormData,
+  GameResult,
+  TeamId,
+} from "@/types/game-log";
 import { KBO_STADIUMS, KBO_TEAMS, COMPANION_LABELS } from "@/constants/kbo";
 import { compressImage } from "@/lib/image";
 import useLogStore from "@/store/useLogStore";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
-import Textarea from "@/components/ui/Textarea";
+import useAppStore from "@/store/useAppStore";
+import { X, Calendar, MapPin, Users, NotebookPen } from "lucide-react";
 
 interface LogFormProps {
   initialData?: GameLog;
@@ -17,24 +21,10 @@ interface LogFormProps {
 
 const today = new Date().toISOString().split("T")[0];
 
-const defaultForm: GameLogFormData = {
-  date: today,
-  stadiumId: "jamsil",
-  homeTeamId: "LG",
-  awayTeamId: "Doosan",
-  myTeamId: "LG",
-  seat: { section: "", row: "", number: "" },
-  companion: "solo",
-  result: "win",
-  score: { home: 0, away: 0 },
-  photos: [],
-  memo: "",
-  food: "",
-};
-
 export default function LogForm({ initialData }: LogFormProps) {
   const router = useRouter();
   const { addLog, updateLog } = useLogStore();
+  const supportingTeamId = useAppStore((s) => s.supportingTeamId);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<GameLogFormData>(
@@ -53,23 +43,50 @@ export default function LogForm({ initialData }: LogFormProps) {
           memo: initialData.memo,
           food: initialData.food,
         }
-      : defaultForm
+      : {
+          date: today,
+          stadiumId: "jamsil",
+          homeTeamId: "" as TeamId,
+          awayTeamId: "" as TeamId,
+          myTeamId: supportingTeamId ?? "LG",
+          seat: { section: "", row: "", number: "" },
+          companion: "solo",
+          result: "win",
+          score: { home: 0, away: 0 },
+          photos: [],
+          memo: "",
+          food: "",
+        },
   );
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [uploading, setUploading] = useState(false);
 
-  // 점수 변경 시 결과 자동 계산
-  useEffect(() => {
-    if (!form.myTeamId) return;
-    const isHome = form.myTeamId === form.homeTeamId;
-    const myScore = isHome ? form.score.home : form.score.away;
-    const oppScore = isHome ? form.score.away : form.score.home;
-    const result: GameResult =
-      myScore > oppScore ? "win" : myScore < oppScore ? "lose" : "draw";
-    setForm((f) => ({ ...f, result }));
-  }, [form.score, form.myTeamId, form.homeTeamId]);
+  const [awayScore, setAwayScore] = useState<number>(
+    initialData ? initialData.score.away : 0,
+  );
+  const [homeScore, setHomeScore] = useState<number>(
+    initialData ? initialData.score.home : 0,
+  );
 
-  function set<K extends keyof GameLogFormData>(key: K, value: GameLogFormData[K]) {
+  // 응원팀 자동 설정 (신규 기록 시)
+  useEffect(() => {
+    if (!initialData && supportingTeamId) {
+      setForm((f) => ({ ...f, myTeamId: supportingTeamId }));
+    }
+  }, [supportingTeamId, initialData]);
+
+  // 점수 변경 시 form에 반영
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      score: { away: awayScore ?? 0, home: homeScore ?? 0 },
+    }));
+  }, [awayScore, homeScore]);
+
+  function set<K extends keyof GameLogFormData>(
+    key: K,
+    value: GameLogFormData[K],
+  ) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
   }
@@ -79,8 +96,12 @@ export default function LogForm({ initialData }: LogFormProps) {
     if (!form.stadiumId) newErrors.stadiumId = "구장을 선택해주세요";
     if (!form.homeTeamId) newErrors.homeTeamId = "홈팀을 선택해주세요";
     if (!form.awayTeamId) newErrors.awayTeamId = "원정팀을 선택해주세요";
-    if (form.homeTeamId === form.awayTeamId) newErrors.awayTeamId = "홈팀과 원정팀이 같을 수 없습니다";
-    if (!form.myTeamId) newErrors.myTeamId = "응원팀을 선택해주세요";
+    if (
+      form.homeTeamId &&
+      form.awayTeamId &&
+      form.homeTeamId === form.awayTeamId
+    )
+      newErrors.awayTeamId = "홈팀과 원정팀이 같을 수 없습니다";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -102,7 +123,10 @@ export default function LogForm({ initialData }: LogFormProps) {
   }
 
   function removePhoto(index: number) {
-    set("photos", form.photos.filter((_, i) => i !== index));
+    set(
+      "photos",
+      form.photos.filter((_, i) => i !== index),
+    );
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -118,238 +142,370 @@ export default function LogForm({ initialData }: LogFormProps) {
     }
   }
 
-  const resultOptions: { value: GameResult; label: string; style: string }[] = [
-    { value: "win", label: "승", style: "bg-green-100 text-green-700 border-green-300" },
-    { value: "lose", label: "패", style: "bg-red-100 text-red-600 border-red-300" },
-    { value: "draw", label: "무", style: "bg-gray-100 text-gray-600 border-gray-300" },
-  ];
+  const homeTeam = KBO_TEAMS.find((t) => t.id === form.homeTeamId);
+  const awayTeam = KBO_TEAMS.find((t) => t.id === form.awayTeamId);
+
+  const resultConfig = {
+    win: { label: "승리", bg: "#DCFCE7", text: "#16A34A", border: "#86EFAC" },
+    lose: { label: "패배", bg: "#FEE2E2", text: "#DC2626", border: "#FCA5A5" },
+    draw: {
+      label: "무승부",
+      bg: "#F3F4F6",
+      text: "#6B7280",
+      border: "#D1D5DB",
+    },
+  };
+
+  const cardStyle = {
+    background: "var(--theme-bg-card)",
+    border: "1px solid var(--theme-primary-light)",
+  };
+
+  const inputStyle = {
+    background: "var(--theme-bg)",
+    borderColor: "var(--theme-primary-light)",
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-8">
-      {/* 경기 정보 */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">경기 정보</h2>
-
-        <Input
-          label="날짜"
-          type="date"
-          id="date"
-          value={form.date}
-          max={today}
-          onChange={(e) => set("date", e.target.value)}
-        />
-
-        <Select
-          label="구장"
-          id="stadium"
-          value={form.stadiumId}
-          onChange={(e) => set("stadiumId", e.target.value as typeof form.stadiumId)}
-          error={errors.stadiumId}
-          placeholder="구장 선택"
-        >
-          {KBO_STADIUMS.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </Select>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Select
-            label="원정팀"
-            id="awayTeam"
-            value={form.awayTeamId}
-            onChange={(e) => set("awayTeamId", e.target.value as TeamId)}
-            error={errors.awayTeamId}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 pb-8">
+      {/* 날짜 & 구장 */}
+      <div className="rounded-3xl p-5" style={cardStyle}>
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar size={15} style={{ color: "var(--theme-primary)" }} />
+          <p className="text-sm font-bold text-gray-700">언제, 어디서?</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          <input
+            type="date"
+            value={form.date}
+            max={today}
+            onChange={(e) => set("date", e.target.value)}
+            className="w-full px-4 py-3 rounded-2xl border text-sm font-medium outline-none"
+            style={inputStyle}
+          />
+          <select
+            value={form.stadiumId}
+            onChange={(e) => {
+              const newStadiumId = e.target.value as typeof form.stadiumId;
+              set("stadiumId", newStadiumId);
+              const stadium = KBO_STADIUMS.find((s) => s.id === newStadiumId);
+              if (stadium?.homeTeams.length === 1) {
+                set("homeTeamId", stadium.homeTeams[0]);
+              }
+            }}
+            className="w-full px-4 py-3 rounded-2xl border text-sm font-medium outline-none appearance-none"
+            style={{
+              ...inputStyle,
+              borderColor: errors.stadiumId
+                ? "#F87171"
+                : "var(--theme-primary-light)",
+            }}
           >
-            {KBO_TEAMS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            {KBO_STADIUMS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
-          </Select>
+          </select>
+          {errors.stadiumId && (
+            <p className="text-xs text-red-400">{errors.stadiumId}</p>
+          )}
+        </div>
+      </div>
 
-          <Select
-            label="홈팀"
-            id="homeTeam"
-            value={form.homeTeamId}
-            onChange={(e) => set("homeTeamId", e.target.value as TeamId)}
-            error={errors.homeTeamId}
-          >
-            {KBO_TEAMS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Select>
+      {/* 팀 선택 */}
+      <div className="rounded-3xl p-5" style={cardStyle}>
+        <div className="flex items-center gap-2 mb-4">
+          <MapPin size={15} style={{ color: "var(--theme-primary)" }} />
+          <p className="text-sm font-bold text-gray-700">어떤 경기?</p>
         </div>
 
-        <Select
-          label="응원팀"
-          id="myTeam"
-          value={form.myTeamId}
-          onChange={(e) => set("myTeamId", e.target.value as TeamId)}
-          error={errors.myTeamId}
-        >
-          {KBO_TEAMS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
+        {/* 팀 로고 매치업 */}
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <div className="flex-1 flex flex-col items-center gap-1.5">
+            <p className="text-xs text-gray-400">원정</p>
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center shadow-sm"
+              style={{ background: "var(--theme-bg)" }}
+            >
+              {awayTeam && (
+                <div className="w-10 h-10 relative">
+                  <Image
+                    src={awayTeam.logo}
+                    alt={awayTeam.name}
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              )}
+            </div>
+            <p className="text-xs font-bold text-gray-600">
+              {awayTeam?.shortName}
+            </p>
+          </div>
 
-        {/* 점수 */}
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-1">점수</p>
-          <div className="flex items-center gap-3">
-            <Input
-              type="number"
-              min={0}
-              max={99}
-              value={form.score.away}
-              onChange={(e) =>
-                set("score", { ...form.score, away: Number(e.target.value) })
-              }
-              className="text-center"
-            />
-            <span className="text-gray-400 font-bold shrink-0">:</span>
-            <Input
-              type="number"
-              min={0}
-              max={99}
-              value={form.score.home}
-              onChange={(e) =>
-                set("score", { ...form.score, home: Number(e.target.value) })
-              }
-              className="text-center"
-            />
+          <span className="text-xl font-black text-gray-200 mt-2">VS</span>
+
+          <div className="flex-1 flex flex-col items-center gap-1.5">
+            <p className="text-xs text-gray-400">홈</p>
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center shadow-sm"
+              style={{ background: "var(--theme-bg)" }}
+            >
+              {homeTeam && (
+                <div className="w-10 h-10 relative">
+                  <Image
+                    src={homeTeam.logo}
+                    alt={homeTeam.name}
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              )}
+            </div>
+            <p className="text-xs font-bold text-gray-600">
+              {homeTeam?.shortName}
+            </p>
           </div>
         </div>
 
-        {/* 결과 */}
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">결과</p>
-          <div className="flex gap-2">
-            {resultOptions.map(({ value, label, style }) => (
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={form.awayTeamId}
+            onChange={(e) => set("awayTeamId", e.target.value as TeamId)}
+            className="w-full px-3 py-2.5 rounded-2xl border text-sm font-medium outline-none appearance-none text-center"
+            style={{
+              ...inputStyle,
+              borderColor: errors.awayTeamId
+                ? "#F87171"
+                : "var(--theme-primary-light)",
+            }}
+          >
+            <option value="" disabled>
+              원정팀 선택
+            </option>
+            {KBO_TEAMS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={form.homeTeamId}
+            onChange={(e) => set("homeTeamId", e.target.value as TeamId)}
+            className="w-full px-3 py-2.5 rounded-2xl border text-sm font-medium outline-none appearance-none text-center"
+            style={{
+              ...inputStyle,
+              borderColor: errors.homeTeamId
+                ? "#F87171"
+                : "var(--theme-primary-light)",
+            }}
+          >
+            <option value="" disabled>
+              홈팀 선택
+            </option>
+            {KBO_TEAMS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {errors.awayTeamId && (
+          <p className="text-xs text-red-400 mt-1">{errors.awayTeamId}</p>
+        )}
+      </div>
+
+      {/* 점수 */}
+      <div className="rounded-3xl p-5" style={cardStyle}>
+        <p className="text-sm font-bold text-gray-700 mb-5">점수는요?</p>
+
+        <div className="flex items-center justify-center gap-6">
+          {/* 원정 점수 */}
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-gray-400">{awayTeam?.shortName ?? "원정"}</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAwayScore((v) => Math.max(0, v - 1))}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold text-gray-500"
+                style={{ background: "var(--theme-bg)" }}
+              >
+                −
+              </button>
+              <span className="text-4xl font-black w-10 text-center tabular-nums" style={{ color: "var(--theme-primary)" }}>
+                {awayScore}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAwayScore((v) => Math.min(99, v + 1))}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-sm"
+                style={{ background: "var(--theme-primary)" }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <span className="text-2xl font-black text-gray-200 mt-6">:</span>
+
+          {/* 홈 점수 */}
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-gray-400">{homeTeam?.shortName ?? "홈"}</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setHomeScore((v) => Math.max(0, v - 1))}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold text-gray-500"
+                style={{ background: "var(--theme-bg)" }}
+              >
+                −
+              </button>
+              <span className="text-4xl font-black w-10 text-center tabular-nums" style={{ color: "var(--theme-primary)" }}>
+                {homeScore}
+              </span>
+              <button
+                type="button"
+                onClick={() => setHomeScore((v) => Math.min(99, v + 1))}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-sm"
+                style={{ background: "var(--theme-primary)" }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 우리팀은? */}
+      <div className="rounded-3xl p-5" style={cardStyle}>
+        <p className="text-sm font-bold text-gray-700 mb-4">우리팀은?</p>
+        <div className="flex gap-2">
+          {(Object.entries(resultConfig) as [GameResult, typeof resultConfig.win][]).map(([value, cfg]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => set("result", value)}
+              className="flex-1 py-2.5 rounded-2xl text-sm font-bold border-2 transition-all"
+              style={
+                form.result === value
+                  ? { background: cfg.bg, color: cfg.text, borderColor: cfg.border }
+                  : { background: "var(--theme-bg)", color: "#9CA3AF", borderColor: "var(--theme-primary-light)" }
+              }
+            >
+              {cfg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 동반인 */}
+      <div className="rounded-3xl p-5" style={cardStyle}>
+        <div className="flex items-center gap-2 mb-4">
+          <Users size={15} style={{ color: "var(--theme-primary)" }} />
+          <p className="text-sm font-bold text-gray-700">누구랑 갔어요?</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(Object.entries(COMPANION_LABELS) as [string, string][]).map(
+            ([value, label]) => (
               <button
                 key={value}
                 type="button"
-                onClick={() => set("result", value)}
-                className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all
-                  ${form.result === value ? style + " border-2 scale-105" : "bg-white text-gray-400 border-gray-200"}
-                `}
+                onClick={() => set("companion", value as typeof form.companion)}
+                className="px-4 py-2 rounded-2xl text-sm font-medium border-2 transition-all"
+                style={
+                  form.companion === value
+                    ? {
+                        background: "var(--theme-primary)",
+                        color: "#fff",
+                        borderColor: "var(--theme-primary)",
+                      }
+                    : {
+                        background: "var(--theme-bg)",
+                        color: "#6B7280",
+                        borderColor: "var(--theme-primary-light)",
+                      }
+                }
               >
                 {label}
               </button>
-            ))}
-          </div>
+            ),
+          )}
         </div>
-      </section>
+      </div>
 
-      {/* 관람 정보 */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">관람 정보</h2>
-
-        <Select
-          label="동반인"
-          id="companion"
-          value={form.companion}
-          onChange={(e) => set("companion", e.target.value as typeof form.companion)}
-        >
-          {Object.entries(COMPANION_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
-
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">좌석</p>
-          <div className="grid grid-cols-3 gap-2">
-            <Input
-              placeholder="구역"
-              value={form.seat.section}
-              onChange={(e) => set("seat", { ...form.seat, section: e.target.value })}
-            />
-            <Input
-              placeholder="열"
-              value={form.seat.row ?? ""}
-              onChange={(e) => set("seat", { ...form.seat, row: e.target.value })}
-            />
-            <Input
-              placeholder="번호"
-              value={form.seat.number ?? ""}
-              onChange={(e) => set("seat", { ...form.seat, number: e.target.value })}
-            />
-          </div>
+      {/* 메모 & 사진 */}
+      <div className="rounded-3xl p-5" style={cardStyle}>
+        <div className="flex items-center gap-2 mb-4">
+          <NotebookPen size={15} style={{ color: "var(--theme-primary)" }} />
+          <p className="text-sm font-bold text-gray-700">기억하고 싶은 것들</p>
         </div>
-      </section>
 
-      {/* 기록 */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">기록</h2>
-
-        <Textarea
-          label="메모"
-          id="memo"
+        <textarea
           placeholder="경기 감상, 인상적인 장면 등을 기록해보세요"
           value={form.memo}
           onChange={(e) => set("memo", e.target.value)}
+          rows={3}
+          className="w-full px-4 py-3 rounded-2xl border text-sm outline-none resize-none mb-4"
+          style={inputStyle}
         />
 
-        <Input
-          label="먹거리"
-          id="food"
-          placeholder="오늘 먹은 구장 음식을 기록해보세요"
-          value={form.food}
-          onChange={(e) => set("food", e.target.value)}
-        />
-
-        {/* 사진 */}
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">
-            사진 <span className="text-gray-400 font-normal">({form.photos.length}/5)</span>
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {form.photos.map((photo, i) => (
-              <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(i)}
-                  className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white text-xs"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            {form.photos.length < 5 && (
+        <p className="text-xs font-bold text-gray-500 mb-2">
+          사진{" "}
+          <span className="font-normal text-gray-400">
+            ({form.photos.length}/5)
+          </span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {form.photos.map((photo, i) => (
+            <div
+              key={i}
+              className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo} alt="" className="w-full h-full object-cover" />
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 text-xs gap-1"
+                onClick={() => removePhoto(i)}
+                className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white"
               >
-                <span className="text-2xl leading-none">+</span>
-                {uploading ? "업로드 중" : "사진 추가"}
+                <X size={10} />
               </button>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handlePhotoChange}
-          />
+            </div>
+          ))}
+          {form.photos.length < 5 && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-20 h-20 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-xs gap-1 transition-opacity disabled:opacity-50"
+              style={{
+                borderColor: "var(--theme-primary-light)",
+                color: "var(--theme-primary)",
+              }}
+            >
+              <span className="text-2xl leading-none">+</span>
+              {uploading ? "업로드 중" : "사진 추가"}
+            </button>
+          )}
         </div>
-      </section>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handlePhotoChange}
+        />
+      </div>
 
-      <Button type="submit" fullWidth size="lg">
+      <button
+        type="submit"
+        className="w-full py-4 rounded-2xl text-sm font-bold text-white shadow-md active:scale-95 transition-transform"
+        style={{ background: "var(--theme-primary)" }}
+      >
         {initialData ? "수정 완료" : "기록 저장"}
-      </Button>
+      </button>
     </form>
   );
 }

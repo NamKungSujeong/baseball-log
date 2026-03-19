@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import type { GameLog } from "@/types/game-log";
@@ -13,52 +14,68 @@ export default function LogCard({ log }: LogCardProps) {
   const homeTeam = getTeam(log.homeTeamId);
   const awayTeam = getTeam(log.awayTeamId);
   const stadium = getStadium(log.stadiumId);
-  const dateLabel = format(new Date(log.date), "yyyy년 M월 d일 (EEE)", { locale: ko });
+  const dateLabel = format(new Date(log.date), "M월 d일 (EEE)", { locale: ko });
 
   return (
     <Link href={`/logs/${log.id}`}>
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:bg-gray-50 transition-colors">
-        <div className="flex items-start justify-between gap-3">
-          {/* 경기 정보 */}
+      <div
+        className="rounded-2xl p-4 active:opacity-80 transition-opacity"
+        style={{
+          background: "var(--theme-bg-card)",
+          border: "1px solid var(--theme-primary-light)",
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          {/* 경기 매치업 */}
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-400 mb-1">{dateLabel}</p>
+            <p className="text-xs text-gray-400 mb-2">{dateLabel} · {stadium?.name}</p>
 
-            {/* 팀 vs 점수 */}
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className="text-sm font-bold truncate"
-                style={{ color: awayTeam?.color }}
-              >
-                {awayTeam?.name}
-              </span>
-              <span className="text-gray-400 text-xs shrink-0">
-                {log.score.away} : {log.score.home}
-              </span>
-              <span
-                className="text-sm font-bold truncate"
-                style={{ color: homeTeam?.color }}
-              >
-                {homeTeam?.name}
-              </span>
+            {/* 팀 로고 + 점수 */}
+            <div className="flex items-center gap-2">
+              {/* 원정팀 */}
+              <div className="flex items-center gap-1.5">
+                {awayTeam && (
+                  <div className="w-7 h-7 relative shrink-0">
+                    <Image
+                      src={awayTeam.logo}
+                      alt={awayTeam.name}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                )}
+                <span className="text-base font-black tabular-nums text-gray-800">
+                  {log.score.away}
+                </span>
+              </div>
+
+              <span className="text-xs font-bold text-gray-300">:</span>
+
+              {/* 홈팀 */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-black tabular-nums text-gray-800">
+                  {log.score.home}
+                </span>
+                {homeTeam && (
+                  <div className="w-7 h-7 relative shrink-0">
+                    <Image
+                      src={homeTeam.logo}
+                      alt={homeTeam.name}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* 구장 · 동반인 */}
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span>{stadium?.name}</span>
-              <span>·</span>
-              <span>{COMPANION_LABELS[log.companion]}</span>
-              {log.seat.section && (
-                <>
-                  <span>·</span>
-                  <span>{log.seat.section}구역</span>
-                </>
+            {/* 동반인 */}
+            <p className="text-xs text-gray-400 mt-1.5">
+              {COMPANION_LABELS[log.companion]}
+              {log.memo && (
+                <span className="ml-1 text-gray-300">· {log.memo.slice(0, 20)}{log.memo.length > 20 ? "…" : ""}</span>
               )}
-            </div>
-
-            {/* 메모 미리보기 */}
-            {log.memo && (
-              <p className="mt-2 text-xs text-gray-500 line-clamp-2">{log.memo}</p>
-            )}
+            </p>
           </div>
 
           {/* 결과 뱃지 */}
@@ -78,7 +95,13 @@ export default function LogCard({ log }: LogCardProps) {
               </div>
             ))}
             {log.photos.length > 3 && (
-              <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center text-xs text-gray-500 shrink-0">
+              <div
+                className="w-16 h-16 rounded-xl flex items-center justify-center text-xs font-bold shrink-0"
+                style={{
+                  background: "var(--theme-primary-light)",
+                  color: "var(--theme-primary)",
+                }}
+              >
                 +{log.photos.length - 3}
               </div>
             )}

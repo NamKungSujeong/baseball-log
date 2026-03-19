@@ -20,7 +20,11 @@ function blendWithWhite(hex: string, alpha: number) {
   return `rgb(${nr}, ${ng}, ${nb})`;
 }
 
-export default function ThemeProvider({ children }: { children: React.ReactNode }) {
+export default function ThemeProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const supportingTeamId = useAppStore((s) => s.supportingTeamId);
 
   useEffect(() => {
@@ -30,11 +34,19 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
 
     document.documentElement.style.setProperty("--theme-primary", primary);
     document.documentElement.style.setProperty("--theme-secondary", secondary);
-    // 배경: primary를 흰색과 혼합한 옅은 계열
-    document.documentElement.style.setProperty("--theme-bg", blendWithWhite(primary, 0.05));
-    document.documentElement.style.setProperty("--theme-bg-card", blendWithWhite(primary, 0.09));
-    document.documentElement.style.setProperty("--theme-primary-light", blendWithWhite(primary, 0.15));
-    document.documentElement.style.setProperty("--theme-primary-muted", blendWithWhite(primary, 0.28));
+    // 팀 미선택 시 배경은 흰색, 선택 시 primary 혼합 계열
+    // const bg = team ? blendWithWhite(primary, 0.05) : "rgb(255, 255, 255)";
+    const bgCard = team ? blendWithWhite(primary, 0.09) : "rgb(249, 250, 251)";
+    // document.documentElement.style.setProperty("--theme-bg", bg);
+    document.documentElement.style.setProperty("--theme-bg-card", bgCard);
+    document.documentElement.style.setProperty(
+      "--theme-primary-light",
+      blendWithWhite(primary, 0.15),
+    );
+    document.documentElement.style.setProperty(
+      "--theme-primary-muted",
+      blendWithWhite(primary, 0.28),
+    );
   }, [supportingTeamId]);
 
   return <>{children}</>;
