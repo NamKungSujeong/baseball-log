@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { KBO_TEAMS } from "@/constants/kbo";
+import { KBO_TEAMS } from "@/utils/constants/kbo";
 import useAppStore from "@/store/useAppStore";
 import type { TeamId } from "@/types/game-log";
 

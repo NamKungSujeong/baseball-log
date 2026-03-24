@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import type { GameLog } from "@/types/game-log";
 import { ResultBadge } from "@/components/ui/Badge";
-import { getTeam, getStadium, COMPANION_LABELS } from "@/constants/kbo";
+import { getTeam, getStadium, COMPANION_LABELS } from "@/utils/constants/kbo";
 
 interface LogCardProps {
   log: GameLog;

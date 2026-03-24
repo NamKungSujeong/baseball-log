@@ -9,7 +9,7 @@ import type {
   GameResult,
   TeamId,
 } from "@/types/game-log";
-import { KBO_STADIUMS, KBO_TEAMS, COMPANION_LABELS } from "@/constants/kbo";
+import { KBO_STADIUMS, KBO_TEAMS, COMPANION_LABELS } from "@/utils/constants/kbo";
 import { compressImage } from "@/lib/image";
 import useLogStore from "@/store/useLogStore";
 import useAppStore from "@/store/useAppStore";
