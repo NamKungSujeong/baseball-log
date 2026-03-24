@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import useLogStore from "@/store/useLogStore";
@@ -11,9 +12,13 @@ import balllogMascotWithNote from "@/assets/images/mascot/balllog-mascot-with-no
 import { Star, PenLine, Sparkles } from "lucide-react";
 
 export default function LogsPage() {
-  const logs = useLogStore((s) => s.logs);
-  const { nickname, supportingTeamId } = useAppStore();
+  const { logs, loading, fetchLogs } = useLogStore();
+  const { nickname, supportingTeamId, userId } = useAppStore();
   const supportingTeam = KBO_TEAMS.find((t) => t.id === supportingTeamId);
+
+  useEffect(() => {
+    if (userId) fetchLogs(userId);
+  }, [userId, fetchLogs]);
 
   return (
     <div>
@@ -74,7 +79,17 @@ export default function LogsPage() {
         </Link>
       </div>
 
-      {logs.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div
+            className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+            style={{
+              borderColor: "var(--theme-primary)",
+              borderTopColor: "transparent",
+            }}
+          />
+        </div>
+      ) : logs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
@@ -110,13 +125,11 @@ export default function LogsPage() {
           </Link>
         </div>
       ) : (
-        <>
-          <div className="flex flex-col gap-3">
-            {logs.map((log) => (
-              <LogCard key={log.id} log={log} />
-            ))}
-          </div>
-        </>
+        <div className="flex flex-col gap-3">
+          {logs.map((log) => (
+            <LogCard key={log.id} log={log} />
+          ))}
+        </div>
       )}
     </div>
   );

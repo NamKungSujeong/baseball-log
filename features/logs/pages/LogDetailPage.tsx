@@ -1,23 +1,56 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import useLogStore from "@/store/useLogStore";
+import useAppStore from "@/store/useAppStore";
 import { ResultBadge } from "@/components/ui/Badge";
 import LogForm from "@/features/logs/components/LogForm";
 import { getTeam, getStadium, COMPANION_LABELS } from "@/utils/constants/kbo";
-import { ChevronLeft, PenLine, Trash2, MapPin, Users, NotebookPen, Camera } from "lucide-react";
+import {
+  ChevronLeft,
+  PenLine,
+  Trash2,
+  MapPin,
+  Users,
+  NotebookPen,
+  Camera,
+} from "lucide-react";
+import useAuthStore from "@/store/useAuthStore";
 
 export default function LogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { getLog, deleteLog } = useLogStore();
+  const { getLog, deleteLog, fetchLogs, loading } = useLogStore();
+  const userId = useAuthStore((state) => state.user?.id);
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // 직접 접근 시 logs가 비어있을 수 있으므로 fetch
+  useEffect(() => {
+    if (userId && getLog(id) === undefined && !loading) {
+      fetchLogs(userId);
+    }
+  }, [userId, id, getLog, fetchLogs, loading]);
 
   const log = getLog(id);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div
+          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+          style={{
+            borderColor: "var(--theme-primary)",
+            borderTopColor: "transparent",
+          }}
+        />
+      </div>
+    );
+  }
 
   if (!log) {
     return (
@@ -41,7 +74,10 @@ export default function LogDetailPage() {
           <button
             onClick={() => setEditing(false)}
             className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ background: "var(--theme-bg-card)", border: "1px solid var(--theme-primary-light)" }}
+            style={{
+              background: "var(--theme-bg-card)",
+              border: "1px solid var(--theme-primary-light)",
+            }}
           >
             <ChevronLeft size={18} className="text-gray-500" />
           </button>
@@ -55,7 +91,9 @@ export default function LogDetailPage() {
   const homeTeam = getTeam(log.homeTeamId);
   const awayTeam = getTeam(log.awayTeamId);
   const stadium = getStadium(log.stadiumId);
-  const dateLabel = format(new Date(log.date), "yyyy년 M월 d일 (EEE)", { locale: ko });
+  const dateLabel = format(new Date(log.date), "yyyy년 M월 d일 (EEE)", {
+    locale: ko,
+  });
 
   const seatLabel = [
     log.seat.section && `${log.seat.section}구역`,
@@ -65,10 +103,15 @@ export default function LogDetailPage() {
     .filter(Boolean)
     .join(" ");
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirm("이 기록을 삭제할까요?")) return;
-    deleteLog(id);
-    router.push("/");
+    setDeleting(true);
+    try {
+      await deleteLog(id);
+      router.push("/");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const cardStyle = {
@@ -83,7 +126,10 @@ export default function LogDetailPage() {
         <button
           onClick={() => router.back()}
           className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ background: "var(--theme-bg-card)", border: "1px solid var(--theme-primary-light)" }}
+          style={{
+            background: "var(--theme-bg-card)",
+            border: "1px solid var(--theme-primary-light)",
+          }}
         >
           <ChevronLeft size={18} className="text-gray-500" />
         </button>
@@ -91,18 +137,22 @@ export default function LogDetailPage() {
           <button
             onClick={() => setEditing(true)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-bold transition-all active:scale-95"
-            style={{ background: "var(--theme-primary-light)", color: "var(--theme-primary)" }}
+            style={{
+              background: "var(--theme-primary-light)",
+              color: "var(--theme-primary)",
+            }}
           >
             <PenLine size={14} />
             수정
           </button>
           <button
             onClick={handleDelete}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-bold transition-all active:scale-95"
+            disabled={deleting}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-bold transition-all active:scale-95 disabled:opacity-60"
             style={{ background: "#FEE2E2", color: "#DC2626" }}
           >
             <Trash2 size={14} />
-            삭제
+            {deleting ? "삭제 중..." : "삭제"}
           </button>
         </div>
       </div>
@@ -111,9 +161,7 @@ export default function LogDetailPage() {
       <div className="rounded-3xl p-5" style={cardStyle}>
         <p className="text-xs text-gray-400 mb-4 text-center">{dateLabel}</p>
 
-        {/* 팀 대결 */}
         <div className="flex items-center justify-between gap-3 mb-4">
-          {/* 원정팀 */}
           <div className="flex-1 flex flex-col items-center gap-2">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center"
@@ -121,14 +169,18 @@ export default function LogDetailPage() {
             >
               {awayTeam && (
                 <div className="w-10 h-10 relative">
-                  <Image src={awayTeam.logo} alt={awayTeam.name} fill className="object-contain" />
+                  <Image
+                    src={awayTeam.logo}
+                    alt={awayTeam.name}
+                    fill
+                    className="object-contain"
+                  />
                 </div>
               )}
             </div>
             <p className="text-xs font-bold text-gray-600">{awayTeam?.name}</p>
           </div>
 
-          {/* 점수 + 결과 */}
           <div className="flex flex-col items-center gap-2">
             <p className="text-4xl font-black text-gray-900 tabular-nums">
               {log.score.away}
@@ -138,7 +190,6 @@ export default function LogDetailPage() {
             <ResultBadge result={log.result} />
           </div>
 
-          {/* 홈팀 */}
           <div className="flex-1 flex flex-col items-center gap-2">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center"
@@ -146,7 +197,12 @@ export default function LogDetailPage() {
             >
               {homeTeam && (
                 <div className="w-10 h-10 relative">
-                  <Image src={homeTeam.logo} alt={homeTeam.name} fill className="object-contain" />
+                  <Image
+                    src={homeTeam.logo}
+                    alt={homeTeam.name}
+                    fill
+                    className="object-contain"
+                  />
                 </div>
               )}
             </div>
@@ -154,7 +210,6 @@ export default function LogDetailPage() {
           </div>
         </div>
 
-        {/* 구장 */}
         <div
           className="flex items-center justify-center gap-1.5 pt-4 text-xs text-gray-500"
           style={{ borderTop: "1px solid var(--theme-primary-light)" }}
@@ -183,7 +238,9 @@ export default function LogDetailPage() {
             <NotebookPen size={14} style={{ color: "var(--theme-primary)" }} />
             <h2 className="text-sm font-bold text-gray-700">메모</h2>
           </div>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{log.memo}</p>
+          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {log.memo}
+          </p>
         </div>
       )}
 
@@ -193,14 +250,24 @@ export default function LogDetailPage() {
           <div className="flex items-center gap-2 mb-3">
             <Camera size={14} style={{ color: "var(--theme-primary)" }} />
             <h2 className="text-sm font-bold text-gray-700">
-              사진 <span className="font-normal text-gray-400">({log.photos.length})</span>
+              사진{" "}
+              <span className="font-normal text-gray-400">
+                ({log.photos.length})
+              </span>
             </h2>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {log.photos.map((photo, i) => (
-              <div key={i} className="aspect-square rounded-2xl overflow-hidden bg-gray-100">
+              <div
+                key={i}
+                className="aspect-square rounded-2xl overflow-hidden bg-gray-100"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={photo}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
               </div>
             ))}
           </div>

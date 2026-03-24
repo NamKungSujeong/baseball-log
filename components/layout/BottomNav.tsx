@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import useAppStore from "@/store/useAppStore";
-import { KBO_TEAMS } from "@/constants/kbo";
+import useAuthStore from "@/store/useAuthStore";
+import { KBO_TEAMS } from "@/utils/constants/kbo";
 
 const HIDDEN_PATHS = ["/login", "/signup"];
 
@@ -93,7 +93,9 @@ const navItems = [
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const supportingTeamId = useAppStore((s) => s.supportingTeamId);
+  const supportingTeamId = useAuthStore(
+    (state) => state.user?.supportingTeamId,
+  );
   const team = KBO_TEAMS.find((t) => t.id === supportingTeamId);
   const themeColor = team?.primary ?? "#6366F1";
 

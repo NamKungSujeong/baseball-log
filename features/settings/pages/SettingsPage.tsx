@@ -17,14 +17,20 @@ export default function SettingsPage() {
     supportingTeamId,
   );
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const supportingTeam = KBO_TEAMS.find((t) => t.id === selectedTeamId);
 
-  const handleSave = () => {
-    setNickname(nicknameInput.trim());
-    setSupportingTeam(selectedTeamId);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await setNickname(nicknameInput.trim());
+      await setSupportingTeam(selectedTeamId);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const hasChanges =
@@ -149,7 +155,7 @@ export default function SettingsPage() {
       {/* 저장 버튼 */}
       <button
         onClick={handleSave}
-        disabled={!hasChanges && !saved}
+        disabled={(!hasChanges && !saved) || saving}
         className="w-full py-4 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-40"
         style={{ background: saved ? "#22C55E" : "var(--theme-primary)" }}
       >
@@ -157,6 +163,8 @@ export default function SettingsPage() {
           <span className="flex items-center justify-center gap-1.5">
             <Check size={16} /> 저장됐어요
           </span>
+        ) : saving ? (
+          "저장 중..."
         ) : (
           "저장하기"
         )}

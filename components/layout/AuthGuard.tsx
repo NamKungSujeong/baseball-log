@@ -2,12 +2,11 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import useAppStore from "@/store/useAppStore";
 
 const AUTH_PATHS = ["/login", "/signup"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const isLoggedIn = useAppStore((s) => s.isLoggedIn);
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
   const pathname = usePathname();
   const router = useRouter();
 

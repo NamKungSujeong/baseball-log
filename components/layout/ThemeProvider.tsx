@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import useAppStore from "@/store/useAppStore";
-import { KBO_TEAMS } from "@/constants/kbo";
+import useAuthStore from "@/store/useAuthStore";
+import { KBO_TEAMS } from "@/utils/constants/kbo";
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -25,7 +25,9 @@ export default function ThemeProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const supportingTeamId = useAppStore((s) => s.supportingTeamId);
+  const supportingTeamId = useAuthStore(
+    (state) => state.user?.supportingTeamId,
+  );
 
   useEffect(() => {
     const team = KBO_TEAMS.find((t) => t.id === supportingTeamId);

@@ -9,10 +9,14 @@ import type {
   GameResult,
   TeamId,
 } from "@/types/game-log";
-import { KBO_STADIUMS, KBO_TEAMS, COMPANION_LABELS } from "@/utils/constants/kbo";
+import {
+  KBO_STADIUMS,
+  KBO_TEAMS,
+  COMPANION_LABELS,
+} from "@/utils/constants/kbo";
 import { compressImage } from "@/lib/image";
 import useLogStore from "@/store/useLogStore";
-import useAppStore from "@/store/useAppStore";
+import useAuthStore from "@/store/useAuthStore";
 import { X, Calendar, MapPin, Users, NotebookPen } from "lucide-react";
 
 interface LogFormProps {
@@ -24,8 +28,12 @@ const today = new Date().toISOString().split("T")[0];
 export default function LogForm({ initialData }: LogFormProps) {
   const router = useRouter();
   const { addLog, updateLog } = useLogStore();
-  const supportingTeamId = useAppStore((s) => s.supportingTeamId);
+  const supportingTeamId = useAuthStore(
+    (state) => state.user?.supportingTeamId,
+  );
+  const userId = useAuthStore((state) => state.user?.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState<GameLogFormData>(
     initialData
@@ -68,14 +76,12 @@ export default function LogForm({ initialData }: LogFormProps) {
     initialData ? initialData.score.home : 0,
   );
 
-  // 응원팀 자동 설정 (신규 기록 시)
   useEffect(() => {
     if (!initialData && supportingTeamId) {
       setForm((f) => ({ ...f, myTeamId: supportingTeamId }));
     }
   }, [supportingTeamId, initialData]);
 
-  // 점수 변경 시 form에 반영
   useEffect(() => {
     setForm((f) => ({
       ...f,
@@ -129,16 +135,20 @@ export default function LogForm({ initialData }: LogFormProps) {
     );
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-
-    if (initialData) {
-      updateLog(initialData.id, form);
-      router.push(`/logs/${initialData.id}`);
-    } else {
-      const log = addLog(form);
-      router.push(`/logs/${log.id}`);
+    setSubmitting(true);
+    try {
+      if (initialData) {
+        await updateLog(initialData.id, form);
+        router.push(`/logs/${initialData.id}`);
+      } else {
+        const log = await addLog(form, userId);
+        router.push(`/logs/${log.id}`);
+      }
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -220,7 +230,6 @@ export default function LogForm({ initialData }: LogFormProps) {
           <p className="text-sm font-bold text-gray-700">어떤 경기?</p>
         </div>
 
-        {/* 팀 로고 매치업 */}
         <div className="flex items-center justify-center gap-4 mb-4">
           <div className="flex-1 flex flex-col items-center gap-1.5">
             <p className="text-xs text-gray-400">원정</p>
@@ -321,9 +330,10 @@ export default function LogForm({ initialData }: LogFormProps) {
         <p className="text-sm font-bold text-gray-700 mb-5">점수는요?</p>
 
         <div className="flex items-center justify-center gap-6">
-          {/* 원정 점수 */}
           <div className="flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-400">{awayTeam?.shortName ?? "원정"}</p>
+            <p className="text-xs text-gray-400">
+              {awayTeam?.shortName ?? "원정"}
+            </p>
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -333,7 +343,10 @@ export default function LogForm({ initialData }: LogFormProps) {
               >
                 −
               </button>
-              <span className="text-4xl font-black w-10 text-center tabular-nums" style={{ color: "var(--theme-primary)" }}>
+              <span
+                className="text-4xl font-black w-10 text-center tabular-nums"
+                style={{ color: "var(--theme-primary)" }}
+              >
                 {awayScore}
               </span>
               <button
@@ -349,9 +362,10 @@ export default function LogForm({ initialData }: LogFormProps) {
 
           <span className="text-2xl font-black text-gray-200 mt-6">:</span>
 
-          {/* 홈 점수 */}
           <div className="flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-400">{homeTeam?.shortName ?? "홈"}</p>
+            <p className="text-xs text-gray-400">
+              {homeTeam?.shortName ?? "홈"}
+            </p>
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -361,7 +375,10 @@ export default function LogForm({ initialData }: LogFormProps) {
               >
                 −
               </button>
-              <span className="text-4xl font-black w-10 text-center tabular-nums" style={{ color: "var(--theme-primary)" }}>
+              <span
+                className="text-4xl font-black w-10 text-center tabular-nums"
+                style={{ color: "var(--theme-primary)" }}
+              >
                 {homeScore}
               </span>
               <button
@@ -381,7 +398,12 @@ export default function LogForm({ initialData }: LogFormProps) {
       <div className="rounded-3xl p-5" style={cardStyle}>
         <p className="text-sm font-bold text-gray-700 mb-4">우리팀은?</p>
         <div className="flex gap-2">
-          {(Object.entries(resultConfig) as [GameResult, typeof resultConfig.win][]).map(([value, cfg]) => (
+          {(
+            Object.entries(resultConfig) as [
+              GameResult,
+              typeof resultConfig.win,
+            ][]
+          ).map(([value, cfg]) => (
             <button
               key={value}
               type="button"
@@ -389,8 +411,16 @@ export default function LogForm({ initialData }: LogFormProps) {
               className="flex-1 py-2.5 rounded-2xl text-sm font-bold border-2 transition-all"
               style={
                 form.result === value
-                  ? { background: cfg.bg, color: cfg.text, borderColor: cfg.border }
-                  : { background: "var(--theme-bg)", color: "#9CA3AF", borderColor: "var(--theme-primary-light)" }
+                  ? {
+                      background: cfg.bg,
+                      color: cfg.text,
+                      borderColor: cfg.border,
+                    }
+                  : {
+                      background: "var(--theme-bg)",
+                      color: "#9CA3AF",
+                      borderColor: "var(--theme-primary-light)",
+                    }
               }
             >
               {cfg.label}
@@ -501,10 +531,11 @@ export default function LogForm({ initialData }: LogFormProps) {
 
       <button
         type="submit"
-        className="w-full py-4 rounded-2xl text-sm font-bold text-white shadow-md active:scale-95 transition-transform"
+        disabled={submitting}
+        className="w-full py-4 rounded-2xl text-sm font-bold text-white shadow-md active:scale-95 transition-transform disabled:opacity-60"
         style={{ background: "var(--theme-primary)" }}
       >
-        {initialData ? "수정 완료" : "기록 저장"}
+        {submitting ? "저장 중..." : initialData ? "수정 완료" : "기록 저장"}
       </button>
     </form>
   );
