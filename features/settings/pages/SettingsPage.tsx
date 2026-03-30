@@ -2,15 +2,16 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import useAppStore from "@/store/useAppStore";
+import useAuthStore from "@/store/useAuthStore";
 import TeamSelector from "@/components/ui/TeamSelector";
 import { KBO_TEAMS } from "@/utils/constants/kbo";
 import type { TeamId } from "@/types/game-log";
 import { Settings, CircleDot, Heart, Check } from "lucide-react";
 
 export default function SettingsPage() {
-  const { nickname, supportingTeamId, setNickname, setSupportingTeam } =
-    useAppStore();
+  const { user, setNickname, setSupportingTeam } = useAuthStore();
+  const nickname = user?.nickname ?? "";
+  const supportingTeamId = user?.supportingTeamId ?? null;
 
   const [nicknameInput, setNicknameInput] = useState(nickname);
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(

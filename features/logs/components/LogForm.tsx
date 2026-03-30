@@ -31,7 +31,6 @@ export default function LogForm({ initialData }: LogFormProps) {
   const supportingTeamId = useAuthStore(
     (state) => state.user?.supportingTeamId,
   );
-  const userId = useAuthStore((state) => state.user?.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -144,7 +143,7 @@ export default function LogForm({ initialData }: LogFormProps) {
         await updateLog(initialData.id, form);
         router.push(`/logs/${initialData.id}`);
       } else {
-        const log = await addLog(form, userId);
+        const log = await addLog(form);
         router.push(`/logs/${log.id}`);
       }
     } finally {

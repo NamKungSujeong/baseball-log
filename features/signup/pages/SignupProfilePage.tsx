@@ -9,7 +9,7 @@ import useSignup from "../hooks/useSignup";
 export default function SignupProfilePage() {
   const { handleSignup, submitting, error } = useSignup();
 
-  const [name, setName] = useState("");
+  const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -18,13 +18,13 @@ export default function SignupProfilePage() {
 
   const passwordMatch = password === passwordConfirm;
   const canNextStep1 =
-    name.trim().length >= 2 &&
+    nickname.trim().length >= 2 &&
     email.trim().length > 0 &&
     password.length >= 6 &&
     passwordMatch;
 
   const handleFinish = async () => {
-    await handleSignup(name.trim(), email.trim(), password, selectedTeamId);
+    await handleSignup(nickname.trim(), email.trim(), password, selectedTeamId);
   };
 
   return (
@@ -71,12 +71,12 @@ export default function SignupProfilePage() {
           >
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-2">
-                이름
+                닉네임
               </label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
                 placeholder="2자 이상 입력해주세요"
                 maxLength={20}
                 autoFocus

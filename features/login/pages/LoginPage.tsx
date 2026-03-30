@@ -5,9 +5,6 @@ import balllogMascotWithNote from "@/assets/images/mascot/balllog-mascot-with-no
 import Image from "next/image";
 import Link from "next/link";
 import useLogin from "../hooks/useLogin";
-import { axiosConfigSetting } from "@/lib/api";
-
-axiosConfigSetting();
 
 export default function LoginPage() {
   const {

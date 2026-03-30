@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import useLogStore from "@/store/useLogStore";
-import useAppStore from "@/store/useAppStore";
+import useAuthStore from "@/store/useAuthStore";
 import LogCard from "@/features/logs/components/LogCard";
 import { KBO_TEAMS } from "@/utils/constants/kbo";
 import balllogLogo from "@/assets/images/balllog-logo.png";
@@ -13,12 +13,14 @@ import { Star, PenLine, Sparkles } from "lucide-react";
 
 export default function LogsPage() {
   const { logs, loading, fetchLogs } = useLogStore();
-  const { nickname, supportingTeamId, userId } = useAppStore();
+  const user = useAuthStore((s) => s.user);
+  const nickname = user?.nickname ?? "";
+  const supportingTeamId = user?.supportingTeamId ?? null;
   const supportingTeam = KBO_TEAMS.find((t) => t.id === supportingTeamId);
 
   useEffect(() => {
-    if (userId) fetchLogs(userId);
-  }, [userId, fetchLogs]);
+    fetchLogs();
+  }, [fetchLogs]);
 
   return (
     <div>

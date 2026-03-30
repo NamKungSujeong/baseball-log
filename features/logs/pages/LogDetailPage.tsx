@@ -6,7 +6,6 @@ import Image from "next/image";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import useLogStore from "@/store/useLogStore";
-import useAppStore from "@/store/useAppStore";
 import { ResultBadge } from "@/components/ui/Badge";
 import LogForm from "@/features/logs/components/LogForm";
 import { getTeam, getStadium, COMPANION_LABELS } from "@/utils/constants/kbo";
@@ -19,22 +18,19 @@ import {
   NotebookPen,
   Camera,
 } from "lucide-react";
-import useAuthStore from "@/store/useAuthStore";
-
 export default function LogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { getLog, deleteLog, fetchLogs, loading } = useLogStore();
-  const userId = useAuthStore((state) => state.user?.id);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // 직접 접근 시 logs가 비어있을 수 있으므로 fetch
   useEffect(() => {
-    if (userId && getLog(id) === undefined && !loading) {
-      fetchLogs(userId);
+    if (getLog(id) === undefined && !loading) {
+      fetchLogs();
     }
-  }, [userId, id, getLog, fetchLogs, loading]);
+  }, [id, getLog, fetchLogs, loading]);
 
   const log = getLog(id);
 

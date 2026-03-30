@@ -4,7 +4,6 @@ import Image from "next/image";
 import { KBO_TEAMS } from "@/utils/constants/kbo";
 import useAuthStore from "@/store/useAuthStore";
 import type { TeamId } from "@/types/game-log";
-import useAppStore from "@/store/useAppStore";
 
 interface TeamSelectorProps {
   value?: TeamId | null;
@@ -13,7 +12,7 @@ interface TeamSelectorProps {
 
 export default function TeamSelector({ value, onChange }: TeamSelectorProps) {
   const storeTeamId = useAuthStore((state) => state.user?.supportingTeamId);
-  const setSupportingTeam = useAppStore((s) => s.setSupportingTeam);
+  const setSupportingTeam = useAuthStore((s) => s.setSupportingTeam);
 
   const selectedId = value !== undefined ? value : storeTeamId;
 
