@@ -1,11 +1,5 @@
 import { create } from "zustand";
 import type { GameLog, GameLogFormData } from "@/types/game-log";
-import {
-  fetchLogsAction,
-  insertLogAction,
-  updateLogAction,
-  deleteLogAction,
-} from "@/features/logs/actions/logsActions";
 
 interface LogStore {
   logs: GameLog[];
@@ -24,8 +18,9 @@ const useLogStore = create<LogStore>((set, get) => ({
   fetchLogs: async () => {
     set({ loading: true });
     try {
-      const logs = await fetchLogsAction();
-      set({ logs });
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      set({ logs: data.logs ?? [] });
     } finally {
       set({ loading: false });
     }
@@ -38,20 +33,28 @@ const useLogStore = create<LogStore>((set, get) => ({
       id: uid,
       createdAt: new Date().toISOString(),
     };
-    await insertLogAction(data, uid);
+    await fetch("/api/logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data, uid }),
+    });
     set((s) => ({ logs: [log, ...s.logs] }));
     return log;
   },
 
   updateLog: async (id: string, data: Partial<GameLogFormData>) => {
-    await updateLogAction(id, data);
+    await fetch(`/api/logs/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
     set((s) => ({
       logs: s.logs.map((l) => (l.id === id ? { ...l, ...data } : l)),
     }));
   },
 
   deleteLog: async (id: string) => {
-    await deleteLogAction(id);
+    await fetch(`/api/logs/${id}`, { method: "DELETE" });
     set((s) => ({ logs: s.logs.filter((l) => l.id !== id) }));
   },
 

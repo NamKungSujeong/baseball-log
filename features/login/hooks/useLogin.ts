@@ -1,6 +1,5 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { loginAction } from "@/features/auth/actions/authActions";
 import useAuthStore from "@/store/useAuthStore";
 
 interface UseLoginProps {
@@ -24,9 +23,14 @@ const useLogin = (): UseLoginProps => {
     setSubmitting(true);
     setError("");
     try {
-      const result = await loginAction(email, password);
-      if ("error" in result) {
-        setError(result.error);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error ?? "로그인 실패");
       } else {
         useAuthStore.setState({ user: result.user });
         router.replace("/");

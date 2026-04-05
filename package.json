@@ -11,8 +11,9 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-query-devtools": "^5.91.3",
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
     "date-fns": "^4.1.0",
+    "geist": "^1.7.0",
     "iron-session": "^8.0.4",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
@@ -23,7 +24,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

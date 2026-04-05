@@ -1,8 +1,6 @@
 import { IUser } from "@/types/model";
 import { create } from "zustand";
 import type { TeamId } from "@/types/game-log";
-import { updateUserAction } from "@/features/settings/actions/settingsActions";
-import { logoutAction } from "@/features/auth/actions/authActions";
 
 interface AuthStore {
   user: IUser | null;
@@ -16,19 +14,27 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   setUser: (user: IUser) => set({ user }),
   logout: async () => {
-    await logoutAction();
+    await fetch("/api/auth/logout", { method: "POST" });
     set({ user: null });
   },
   setNickname: async (nickname: string) => {
     const user = get().user;
     if (!user) return;
-    await updateUserAction(nickname, user.supportingTeamId);
+    await fetch("/api/user", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nickname, supportingTeamId: user.supportingTeamId }),
+    });
     set((s) => ({ user: s.user ? { ...s.user, nickname } : null }));
   },
   setSupportingTeam: async (teamId: TeamId | null) => {
     const user = get().user;
     if (!user) return;
-    await updateUserAction(user.nickname, teamId);
+    await fetch("/api/user", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nickname: user.nickname, supportingTeamId: teamId }),
+    });
     set((s) => ({ user: s.user ? { ...s.user, supportingTeamId: teamId } : null }));
   },
 }));
