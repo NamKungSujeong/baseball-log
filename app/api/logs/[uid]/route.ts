@@ -4,6 +4,7 @@ import { getIronSession } from "iron-session";
 import { dbQuery, escapeStr, sqlStr, sqlNum } from "@/lib/db.server";
 import { sessionOptions, type SessionData } from "@/lib/session";
 import type { GameLogFormData } from "@/types/game-log";
+import { deleteFromStorage, isStorageId } from "@/lib/storage.server";
 
 async function requireUser() {
   const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
@@ -18,16 +19,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ uid:
   const { uid } = await params;
   const data: Partial<GameLogFormData> = await req.json();
 
-  // 소유권 확인
+  // 소유권 확인 + 기존 사진 목록 조회
+  let oldPhotos: string[] = [];
   try {
     const { rows } = await dbQuery(
-      `SELECT user_id FROM game_logs WHERE uid = '${escapeStr(uid)}'`,
+      `SELECT user_id, photos FROM game_logs WHERE uid = '${escapeStr(uid)}'`,
     );
     if (rows.length === 0 || rows[0].user_id !== user.id) {
       return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
     }
+    oldPhotos = rows[0].photos ? JSON.parse(rows[0].photos) : [];
   } catch (e) {
     return NextResponse.json({ error: "DB 오류가 발생했습니다." }, { status: 500 });
+  }
+
+  // 제거된 사진 스토리지에서 삭제
+  if (data.photos !== undefined) {
+    const newPhotoSet = new Set(data.photos);
+    const removed = oldPhotos.filter((p) => isStorageId(p) && !newPhotoSet.has(p));
+    await Promise.all(removed.map((id) => deleteFromStorage(id).catch(() => {})));
   }
 
   const sets: string[] = [];
@@ -68,17 +78,23 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { uid } = await params;
 
-  // 소유권 확인
+  // 소유권 확인 + 사진 목록 조회
+  let photos: string[] = [];
   try {
     const { rows } = await dbQuery(
-      `SELECT user_id FROM game_logs WHERE uid = '${escapeStr(uid)}'`,
+      `SELECT user_id, photos FROM game_logs WHERE uid = '${escapeStr(uid)}'`,
     );
     if (rows.length === 0 || rows[0].user_id !== user.id) {
       return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
     }
+    photos = rows[0].photos ? JSON.parse(rows[0].photos) : [];
   } catch (e) {
     return NextResponse.json({ error: "DB 오류가 발생했습니다." }, { status: 500 });
   }
+
+  // 스토리지 파일 삭제
+  const storageIds = photos.filter(isStorageId);
+  await Promise.all(storageIds.map((id) => deleteFromStorage(id).catch(() => {})));
 
   try {
     await dbQuery(`DELETE FROM game_logs WHERE uid = '${escapeStr(uid)}'`);

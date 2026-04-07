@@ -260,7 +260,7 @@ export default function LogDetailPage() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={photo}
+                  src={photo.startsWith("data:") ? photo : `/api/storage/${photo}`}
                   alt=""
                   className="w-full h-full object-cover"
                 />

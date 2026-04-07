@@ -14,7 +14,7 @@ import {
   KBO_TEAMS,
   COMPANION_LABELS,
 } from "@/utils/constants/kbo";
-import { compressImage } from "@/lib/image";
+import { compressImageToBlob } from "@/lib/image";
 import useLogStore from "@/store/useLogStore";
 import useAuthStore from "@/store/useAuthStore";
 import { X, Calendar, MapPin, Users, NotebookPen } from "lucide-react";
@@ -119,8 +119,20 @@ export default function LogForm({ initialData }: LogFormProps) {
     }
     setUploading(true);
     try {
-      const compressed = await Promise.all(files.map((f) => compressImage(f)));
-      set("photos", [...form.photos, ...compressed]);
+      const fileIds = await Promise.all(
+        files.map(async (f) => {
+          const blob = await compressImageToBlob(f);
+          const formData = new FormData();
+          formData.append("file", blob, f.name || "photo.jpg");
+          const res = await fetch("/api/storage/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const { fileId } = await res.json();
+          return fileId as string;
+        }),
+      );
+      set("photos", [...form.photos, ...fileIds]);
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -492,7 +504,11 @@ export default function LogForm({ initialData }: LogFormProps) {
               className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo} alt="" className="w-full h-full object-cover" />
+              <img
+                src={photo.startsWith("data:") ? photo : `/api/storage/${photo}`}
+                alt=""
+                className="w-full h-full object-cover"
+              />
               <button
                 type="button"
                 onClick={() => removePhoto(i)}

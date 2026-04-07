@@ -91,7 +91,11 @@ export default function LogCard({ log }: LogCardProps) {
                 className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={photo.startsWith("data:") ? photo : `/api/storage/${photo}`}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
               </div>
             ))}
             {log.photos.length > 3 && (
