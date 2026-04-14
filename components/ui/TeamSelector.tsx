@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { KBO_TEAMS } from "@/utils/constants/kbo";
 import useAuthStore from "@/store/useAuthStore";
 import type { TeamId } from "@/types/game-log";
@@ -41,11 +40,11 @@ export default function TeamSelector({ value, onChange }: TeamSelectorProps) {
             }}
           >
             <div className="w-8 h-8 relative">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={team.logo}
                 alt={team.name}
-                fill
-                className="object-contain"
+                className="w-full h-full object-contain"
               />
             </div>
             <span

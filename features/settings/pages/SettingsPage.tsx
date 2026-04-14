@@ -1,15 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/useAuthStore";
 import TeamSelector from "@/components/ui/TeamSelector";
 import { KBO_TEAMS } from "@/utils/constants/kbo";
 import type { TeamId } from "@/types/game-log";
-import { Settings, CircleDot, Heart, Check } from "lucide-react";
+import { Settings, CircleDot, Heart, Check, LogOut } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, setNickname, setSupportingTeam } = useAuthStore();
+  const router = useRouter();
+  const { user, setNickname, setSupportingTeam, logout } = useAuthStore();
   const nickname = user?.nickname ?? "";
   const supportingTeamId = user?.supportingTeamId ?? null;
 
@@ -67,11 +68,11 @@ export default function SettingsPage() {
           >
             {supportingTeam ? (
               <div className="w-8 h-8 relative">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={supportingTeam.logo}
                   alt={supportingTeam.name}
-                  fill
-                  className="object-contain"
+                  className="w-full h-full object-contain"
                 />
               </div>
             ) : (
@@ -132,11 +133,11 @@ export default function SettingsPage() {
           >
             <div className="w-9 h-9 relative shrink-0">
               {supportingTeam && (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={supportingTeam.logo}
                   alt={supportingTeam.name}
-                  fill
-                  className="object-contain"
+                  className="w-full h-full object-contain"
                 />
               )}
             </div>
@@ -169,6 +170,22 @@ export default function SettingsPage() {
         ) : (
           "저장하기"
         )}
+      </button>
+
+      {/* 로그아웃 버튼 */}
+      <button
+        onClick={async () => {
+          await logout();
+          router.push("/login");
+        }}
+        className="w-full mt-3 py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+        style={{
+          background: "var(--theme-bg-card)",
+          border: "1px solid var(--theme-primary-light)",
+          color: "#EF4444",
+        }}
+      >
+        <LogOut size={16} /> 로그아웃
       </button>
     </div>
   );

@@ -36,11 +36,11 @@ export default function LogsPage() {
           {supportingTeam ? (
             <div className="flex items-center gap-1.5 mt-2">
               <div className="w-4 h-4 relative">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={supportingTeam.logo}
                   alt={supportingTeam.name}
-                  fill
-                  className="object-contain"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <p className="text-xs text-gray-500">
