@@ -1,8 +1,8 @@
 const STORAGE_API_URL =
   "https://api.justdeploy.net/organizations/dmtbdpxccy3uowip/storages/afblmek2s5h7whtz";
 const STORAGE_HEADERS = {
-  "X-Access-Key": "2HECYOWF0MJEOWCZKXK65NQYTLAVYOC8",
-  "X-Secret-Key": "07CLJFPX2RACCRBU2OOCGFQTJ3ACHSXR",
+  "X-Access-Key": "REMOVED_ACCESS_KEY",
+  "X-Secret-Key": "REMOVED_SECRET_KEY",
   "Content-Type": "application/json",
 };
 

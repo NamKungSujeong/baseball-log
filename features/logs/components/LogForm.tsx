@@ -15,24 +15,26 @@ import {
   COMPANION_LABELS,
 } from "@/utils/constants/kbo";
 import { compressImageToBlob } from "@/lib/image";
-import useLogStore from "@/store/useLogStore";
+import { useAddLog, useUpdateLog } from "@/features/logs/hooks/useLogs";
 import useAuthStore from "@/store/useAuthStore";
 import { X, Calendar, MapPin, Users, NotebookPen } from "lucide-react";
 
 interface LogFormProps {
   initialData?: GameLog;
+  initialDate?: string;
 }
 
 const today = new Date().toISOString().split("T")[0];
 
-export default function LogForm({ initialData }: LogFormProps) {
+export default function LogForm({ initialData, initialDate }: LogFormProps) {
   const router = useRouter();
-  const { addLog, updateLog } = useLogStore();
+  const addLogMutation = useAddLog();
+  const updateLogMutation = useUpdateLog();
   const supportingTeamId = useAuthStore(
     (state) => state.user?.supportingTeamId,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = addLogMutation.isPending || updateLogMutation.isPending;
 
   const [form, setForm] = useState<GameLogFormData>(
     initialData
@@ -51,7 +53,7 @@ export default function LogForm({ initialData }: LogFormProps) {
           food: initialData.food,
         }
       : {
-          date: today,
+          date: initialDate ?? today,
           stadiumId: "jamsil",
           homeTeamId: "" as TeamId,
           awayTeamId: "" as TeamId,
@@ -146,20 +148,18 @@ export default function LogForm({ initialData }: LogFormProps) {
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    setSubmitting(true);
-    try {
-      if (initialData) {
-        await updateLog(initialData.id, form);
-        router.push(`/logs/${initialData.id}`);
-      } else {
-        const log = await addLog(form);
-        router.push(`/logs/${log.id}`);
-      }
-    } finally {
-      setSubmitting(false);
+    if (initialData) {
+      updateLogMutation.mutate(
+        { id: initialData.id, data: form },
+        { onSuccess: () => router.push(`/logs/${initialData.id}`) },
+      );
+    } else {
+      addLogMutation.mutate(form, {
+        onSuccess: (log) => router.push(`/logs/${log.id}`),
+      });
     }
   }
 
@@ -167,13 +167,13 @@ export default function LogForm({ initialData }: LogFormProps) {
   const awayTeam = KBO_TEAMS.find((t) => t.id === form.awayTeamId);
 
   const resultConfig = {
-    win: { label: "승리", bg: "#DCFCE7", text: "#16A34A", border: "#86EFAC" },
-    lose: { label: "패배", bg: "#FEE2E2", text: "#DC2626", border: "#FCA5A5" },
+    win: { label: "승리", bg: "#f0fdf4", text: "#047857", border: "#a7f3d0" },
+    lose: { label: "패배", bg: "#fff1f2", text: "#be123c", border: "#fecdd3" },
     draw: {
       label: "무승부",
-      bg: "#F3F4F6",
-      text: "#6B7280",
-      border: "#D1D5DB",
+      bg: "#f8fafc",
+      text: "#64748b",
+      border: "#cbd5e1",
     },
   };
 
