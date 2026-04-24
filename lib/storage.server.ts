@@ -1,8 +1,7 @@
-const STORAGE_API_URL =
-  "https://api.justdeploy.net/organizations/dmtbdpxccy3uowip/storages/afblmek2s5h7whtz";
+const STORAGE_API_URL = process.env.STORAGE_API_URL!;
 const STORAGE_HEADERS = {
-  "X-Access-Key": "REMOVED_ACCESS_KEY",
-  "X-Secret-Key": "REMOVED_SECRET_KEY",
+  "X-Access-Key": process.env.STORAGE_ACCESS_KEY!,
+  "X-Secret-Key": process.env.STORAGE_SECRET_KEY!,
   "Content-Type": "application/json",
 };
 
