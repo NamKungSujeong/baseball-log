@@ -11,24 +11,24 @@ const resultConfig: Record<
 > = {
   win: {
     label: "승리",
-    bg: "#DCFCE7",
-    text: "#16A34A",
-    border: "#86EFAC",
-    dot: "#4ADE80",
+    bg: "#f0fdf4",
+    text: "#047857",
+    border: "#a7f3d0",
+    dot: "#34d399",
   },
   lose: {
     label: "패배",
-    bg: "#FEE2E2",
-    text: "#DC2626",
-    border: "#FCA5A5",
-    dot: "#F87171",
+    bg: "#fff1f2",
+    text: "#be123c",
+    border: "#fecdd3",
+    dot: "#fb7185",
   },
   draw: {
     label: "무",
-    bg: "#F3F4F6",
-    text: "#6B7280",
-    border: "#D1D5DB",
-    dot: "#9CA3AF",
+    bg: "#f8fafc",
+    text: "#64748b",
+    border: "#cbd5e1",
+    dot: "#94a3b8",
   },
 };
 

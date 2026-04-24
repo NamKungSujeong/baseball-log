@@ -34,20 +34,20 @@ export default function ThemeProvider({
     const primary = team?.primary ?? "#6366F1";
     const secondary = team?.secondary ?? "#818CF8";
 
-    document.documentElement.style.setProperty("--theme-primary", primary);
+    // 팀 원색을 흰색과 약간 혼합해 파스텔 느낌의 primary 색상으로 설정 (80% 원색, 20% 흰색)
+    const softenedPrimary = blendWithWhite(primary, 0.80);
+    document.documentElement.style.setProperty("--theme-primary", softenedPrimary);
     document.documentElement.style.setProperty("--theme-secondary", secondary);
     // 팀 미선택 시 배경은 흰색, 선택 시 primary 혼합 계열
-    // const bg = team ? blendWithWhite(primary, 0.05) : "rgb(255, 255, 255)";
-    const bgCard = team ? blendWithWhite(primary, 0.09) : "rgb(249, 250, 251)";
-    // document.documentElement.style.setProperty("--theme-bg", bg);
+    const bgCard = team ? blendWithWhite(primary, 0.07) : "rgb(249, 250, 251)";
     document.documentElement.style.setProperty("--theme-bg-card", bgCard);
     document.documentElement.style.setProperty(
       "--theme-primary-light",
-      blendWithWhite(primary, 0.15),
+      blendWithWhite(primary, 0.12),
     );
     document.documentElement.style.setProperty(
       "--theme-primary-muted",
-      blendWithWhite(primary, 0.28),
+      blendWithWhite(primary, 0.25),
     );
   }, [supportingTeamId]);
 

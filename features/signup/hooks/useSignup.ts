@@ -1,26 +1,26 @@
 import { useRouter } from "next/navigation";
-import { signupUser } from "../api/useSignupApis";
 import { useState } from "react";
-import { TeamId } from "@/types/game-log";
+import useAuthStore from "@/store/useAuthStore";
+import type { TeamId } from "@/types/game-log";
 
 interface UseSignupProps {
   submitting: boolean;
   error: string;
   handleSignup: (
-    name: string,
+    nickname: string,
     email: string,
     password: string,
     selectedTeamId: TeamId | null,
   ) => Promise<void>;
 }
+
 const useSignup = (): UseSignupProps => {
   const router = useRouter();
-
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
   const handleSignup = async (
-    name: string,
+    nickname: string,
     email: string,
     password: string,
     selectedTeamId: TeamId | null,
@@ -28,15 +28,23 @@ const useSignup = (): UseSignupProps => {
     setSubmitting(true);
     setError("");
     try {
-      const response = await signupUser(name, email, password, selectedTeamId);
-      if (response.status === 200) {
-        // const { id, nickname, supportingTeamId } = response.data;
-        // login(id, nickname, supportingTeamId);
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname, email, password, supportingTeamId: selectedTeamId }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error ?? "회원가입 실패");
+      } else {
+        useAuthStore.setState({ user: result.user });
         router.replace("/");
-        localStorage.setItem("isLoggedIn", "true");
       }
     } catch (err) {
+      console.error("signup error:", err);
       setError(err instanceof Error ? err.message : "회원가입 실패");
+    } finally {
+      setSubmitting(false);
     }
   };
 

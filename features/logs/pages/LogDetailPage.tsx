@@ -1,12 +1,11 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import useLogStore from "@/store/useLogStore";
-import useAppStore from "@/store/useAppStore";
+import { useLog, useDeleteLog } from "@/features/logs/hooks/useLogs";
 import { ResultBadge } from "@/components/ui/Badge";
 import LogForm from "@/features/logs/components/LogForm";
 import { getTeam, getStadium, COMPANION_LABELS } from "@/utils/constants/kbo";
@@ -19,26 +18,14 @@ import {
   NotebookPen,
   Camera,
 } from "lucide-react";
-import useAuthStore from "@/store/useAuthStore";
-
 export default function LogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { getLog, deleteLog, fetchLogs, loading } = useLogStore();
-  const userId = useAuthStore((state) => state.user?.id);
+  const { data: log, isLoading } = useLog(id);
+  const deleteLogMutation = useDeleteLog();
   const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
-  // 직접 접근 시 logs가 비어있을 수 있으므로 fetch
-  useEffect(() => {
-    if (userId && getLog(id) === undefined && !loading) {
-      fetchLogs(userId);
-    }
-  }, [userId, id, getLog, fetchLogs, loading]);
-
-  const log = getLog(id);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-20">
         <div
@@ -105,13 +92,9 @@ export default function LogDetailPage() {
 
   async function handleDelete() {
     if (!confirm("이 기록을 삭제할까요?")) return;
-    setDeleting(true);
-    try {
-      await deleteLog(id);
-      router.push("/");
-    } finally {
-      setDeleting(false);
-    }
+    deleteLogMutation.mutate(id, {
+      onSuccess: () => router.push("/"),
+    });
   }
 
   const cardStyle = {
@@ -147,12 +130,12 @@ export default function LogDetailPage() {
           </button>
           <button
             onClick={handleDelete}
-            disabled={deleting}
+            disabled={deleteLogMutation.isPending}
             className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-bold transition-all active:scale-95 disabled:opacity-60"
             style={{ background: "#FEE2E2", color: "#DC2626" }}
           >
             <Trash2 size={14} />
-            {deleting ? "삭제 중..." : "삭제"}
+            {deleteLogMutation.isPending ? "삭제 중..." : "삭제"}
           </button>
         </div>
       </div>
@@ -264,7 +247,7 @@ export default function LogDetailPage() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={photo}
+                  src={photo.startsWith("data:") ? photo : `/api/storage/${photo}`}
                   alt=""
                   className="w-full h-full object-cover"
                 />

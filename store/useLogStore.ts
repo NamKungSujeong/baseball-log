@@ -1,44 +1,11 @@
+// 로그 데이터 패칭 및 뮤테이션은 features/logs/hooks/useLogs.ts (React Query)로 이전됨
+// 이 스토어는 하위 호환을 위해 유지되나 현재 사용하지 않음
+
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { GameLog, GameLogFormData } from "@/types/game-log";
 
-interface LogStore {
-  logs: GameLog[];
-  addLog: (data: GameLogFormData) => GameLog;
-  updateLog: (id: string, data: Partial<GameLogFormData>) => void;
-  deleteLog: (id: string) => void;
-  getLog: (id: string) => GameLog | undefined;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface LogStore {}
 
-const useLogStore = create<LogStore>()(
-  persist(
-    (set, get) => ({
-      logs: [],
-
-      addLog: (data) => {
-        const log: GameLog = {
-          ...data,
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-        };
-        set((s) => ({ logs: [log, ...s.logs] }));
-        return log;
-      },
-
-      updateLog: (id, data) => {
-        set((s) => ({
-          logs: s.logs.map((l) => (l.id === id ? { ...l, ...data } : l)),
-        }));
-      },
-
-      deleteLog: (id) => {
-        set((s) => ({ logs: s.logs.filter((l) => l.id !== id) }));
-      },
-
-      getLog: (id) => get().logs.find((l) => l.id === id),
-    }),
-    { name: "baseball-log-storage" }
-  )
-);
+const useLogStore = create<LogStore>(() => ({}));
 
 export default useLogStore;
